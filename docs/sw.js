@@ -1,6 +1,6 @@
 /* Remote Commander service worker — minimal offline shell. */
 const CACHE = 'rc-v1';
-const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/bg.js', '/manifest.json'];
+const ASSETS = ['./', './index.html', './style.css', './app.js', './bg.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
