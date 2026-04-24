@@ -135,24 +135,24 @@ JOBS: dict[str, Job] = {}
 
 
 async def run_job(job: Job, prompt: str, model: str | None, resume: bool) -> None:
-    """Spawn claude CLI and stream events into the job."""
-    cmd = [
-        CLAUDE_CMD,
-        "-p",
-        prompt,
-        "--output-format",
-        "stream-json",
-        "--verbose",
-        "--permission-mode",
-        "bypassPermissions",
-        "--include-partial-messages",
-    ]
-    if resume:
-        cmd += ["--resume", job.session_id]
-    else:
-        cmd += ["--session-id", job.session_id]
-    if model:
-        cmd += ["--model", model]
+    """Spawn claude CLI and stream events into the job. If a --resume against
+    a dead session fails, auto-fallback to a fresh --session-id so the user
+    doesn't get stuck with an 'error: unknown' from a stale localStorage id."""
+
+    def build_cmd(mode: str, sid: str) -> list[str]:
+        c = [
+            CLAUDE_CMD, "-p", prompt,
+            "--output-format", "stream-json",
+            "--verbose",
+            "--permission-mode", "bypassPermissions",
+            "--include-partial-messages",
+        ]
+        c += ["--resume", sid] if mode == "resume" else ["--session-id", sid]
+        if model:
+            c += ["--model", model]
+        return c
+
+    cmd = build_cmd("resume" if resume else "new", job.session_id)
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -220,10 +220,34 @@ async def run_job(job: Job, prompt: str, model: str | None, resume: bool) -> Non
 
     await asyncio.gather(pump_stdout(), pump_stderr())
     rc = await proc.wait()
+
+    # If this was a --resume attempt and it failed because the session doesn't
+    # exist on disk, retry as a fresh --session-id transparently so the UI
+    # doesn't leave the user staring at "error: unknown".
+    saw_result = any(ev.get("type") == "result" for ev in job.events)
+    if resume and (rc != 0 or not saw_result) and not job._cancel_flag:  # type: ignore[attr-defined]
+        new_sid = str(uuid.uuid4())
+        job.publish({"type": "system", "subtype": "resume_fallback",
+                     "text": f"resume {job.session_id[:8]} failed (exit {rc}); starting fresh session {new_sid[:8]}"})
+        job.session_id = new_sid
+        cmd = build_cmd("new", new_sid)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=job.cwd,
+            )
+            job.proc = proc
+            await asyncio.gather(pump_stdout(), pump_stderr())
+            rc = await proc.wait()
+        except Exception as e:
+            job.publish({"type": "error", "error": f"fallback spawn failed: {e}"})
+
     if job.status == "running":
-        job.status = "canceled" if rc != 0 and job._cancel_flag else ("done" if rc == 0 else "error")
+        job.status = "canceled" if rc != 0 and job._cancel_flag else ("done" if rc == 0 else "error")  # type: ignore[attr-defined]
     job.finished_at = datetime.now().isoformat(timespec="seconds")
-    job.publish({"type": "done", "exit_code": rc, "status": job.status})
+    job.publish({"type": "done", "exit_code": rc, "status": job.status, "session_id": job.session_id})
 
 
 # Dataclass doesn't like new attr — attach after creation helper

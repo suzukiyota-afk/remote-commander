@@ -1,5 +1,5 @@
 /* Remote Commander service worker — minimal offline shell. */
-const CACHE = 'rc-v1';
+const CACHE = 'rc-v4';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/bg.js', '/manifest.json'];
 
 self.addEventListener('install', (event) => {

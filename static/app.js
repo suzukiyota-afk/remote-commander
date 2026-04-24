@@ -725,6 +725,11 @@
     }
     if (ev.type === 'stderr') return; // hide from UI
     if (ev.type === 'error') { addTurn('system', 'error: ' + ev.error); return; }
+    if (ev.type === 'system' && ev.subtype === 'resume_fallback') {
+      addTurn('system', ev.text || 'session expired — started a fresh one');
+      // Server will publish a fresh init event next with the new session_id; we'll pick it up there.
+      return;
+    }
     if (ev.type === 'raw') {
       // Last-resort: CLI produced non-JSON output (should not happen now but keep the user informed)
       if (!state.assistantEl) state.assistantEl = addTurn('assistant', '', { noCopy: true });
@@ -735,6 +740,11 @@
       return;
     }
     if (ev.type === 'done') {
+      if (ev.session_id) {
+        state.sessionId = ev.session_id;
+        localStorage.setItem(LS.session, ev.session_id);
+        sessionChip.textContent = ev.session_id.slice(0, 8);
+      }
       jobChip.textContent = 'job ' + (state.activeJobId || '').slice(0, 6) + ' · ' + (ev.status || 'done');
       jobChip.className = 'job-chip ' + (ev.status || 'done');
       sendBtn.disabled = false;
