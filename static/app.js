@@ -290,6 +290,190 @@
   ];
   const pinnedByName = Object.fromEntries(PINNED.map((p) => [p.name, p]));
 
+  // Non-pinned skills: one-line Japanese summary of what each skill does.
+  // Keep each under ~18 chars so it fits a button.
+  const JA_ONELINE = {
+    // user-specific (Japanese skills)
+    'bg-sync-a': '外部ワーク提案送信',
+    'bg-sync-b': '外部ワーク返信対応',
+    'bg-sync-c': 'CW系提案送信',
+    'bg-sync-d': '外部ワーク統合起動',
+    'instagram-auto': 'IG自動運用',
+    'instagram-follower-list': 'IGフォロワー取得',
+    'twitter-auto': 'X自動運用',
+    'twitter-reply': 'X自動リプライ',
+    'visa-doc-translate': 'ビザ書類翻訳',
+    // agent / dev ops
+    'agent-harness-construction': 'エージェント設計最適化',
+    'agent-introspection-debugging': 'エージェント自己デバッグ',
+    'agent-sort': 'ECC導入計画作成',
+    'agentic-engineering': 'エージェント駆動開発',
+    'ai-first-engineering': 'AI駆動開発運用',
+    'ai-regression-testing': 'AI回帰テスト',
+    'autonomous-loops': '自律エージェントループ',
+    'continuous-agent-loop': '継続エージェントループ',
+    'continuous-learning': 'セッションから学習',
+    'continuous-learning-v2': 'Instinct学習',
+    'eval-harness': '評価ハーネス',
+    'enterprise-agent-ops': '長時間エージェント運用',
+    'blueprint': '大規模プロジェクト計画',
+    'claude-devfleet': '並列エージェント協調',
+    'dmux-workflows': '並列エージェント(dmux)',
+    'team-builder': 'チーム構成',
+    'council': '4視点意思決定',
+    'ralphinho-rfc-pipeline': 'RFC DAG実行',
+    'santa-loop': '二重レビュー収束',
+    'nanoclaw-repl': 'NanoClaw REPL',
+    // claude-api / prompt / cost
+    'claude-api': 'Anthropic API実装',
+    'prompt-optimizer': 'プロンプト最適化',
+    'cost-aware-llm-pipeline': 'LLM料金最適化',
+    'token-budget-advisor': 'トークン予算',
+    'strategic-compact': '戦略的compact',
+    'iterative-retrieval': 'サブエージェントRAG',
+    // docs / content
+    'article-writing': '記事・ブログ執筆',
+    'brand-voice': '発信スタイル学習',
+    'content-engine': 'コンテンツ配信',
+    'code-tour': 'コードツアー作成',
+    'deep-research': '深掘りリサーチ',
+    'competitive-research': '競合調査',
+    'market-research': '市場調査',
+    'research-ops': 'リサーチ運用',
+    'search-first': '実装前の調査',
+    'exa-search': 'Exa Web検索',
+    // business ops
+    'automation-audit-ops': '自動化ジョブ棚卸',
+    'carrier-relationship-management': '配送業者管理',
+    'customer-billing-ops': '顧客請求対応',
+    'customs-trade-compliance': '関税・貿易',
+    'energy-procurement': '電気・ガス調達',
+    'finance-billing-ops': '収益・請求運用',
+    'google-workspace-ops': 'Google Workspace操作',
+    'inventory-demand-planning': '需給計画',
+    'investor-materials': '投資家資料作成',
+    'investor-outreach': '投資家コンタクト',
+    'knowledge-ops': 'ナレッジ統合',
+    'lead-intelligence': 'リード探索',
+    'logistics-exception-management': '物流例外対応',
+    'production-scheduling': '生産計画',
+    'project-flow-ops': 'GitHub×Linear同期',
+    'product-capability': 'PRD→実装計画',
+    'quality-nonconformance': '品質不適合対応',
+    'returns-reverse-logistics': '返品物流',
+    'seo': 'SEO対応',
+    'social-graph-ranker': 'SNSグラフ分析',
+    'connections-optimizer': 'SNS人脈整理',
+    'terminal-ops': 'リポジトリ実行',
+    'unified-notifications-ops': '通知統合運用',
+    // skills meta
+    'configure-ecc': 'ECCインストール',
+    'ecc-tools-cost-audit': 'ECC料金監査',
+    'hookify-rules': '動作阻止フック作成',
+    'skill-creator-v3': 'スキル作成',
+    'skill-stocktake': 'スキル棚卸',
+    'workspace-surface-audit': 'ワークスペース監査',
+    'api-connector-builder': 'APIコネクタ追加',
+    'api-design': 'REST API設計',
+    'mcp-server-patterns': 'MCPサーバ構築',
+    'data-scraper-agent': 'スクレイピング自動化',
+    'dashboard-builder': 'ダッシュボード構築',
+    'fal-ai-media': '画像/動画/音声生成',
+    'manim-video': 'Manim動画作成',
+    'remotion-video-creation': 'Remotion動画',
+    'video-editing': '動画編集',
+    'videodb': '動画DB操作',
+    'ui-demo': 'UIデモ動画撮影',
+    'content-hash-cache-pattern': 'ハッシュキャッシュ',
+    'regex-vs-llm-structured-text': 'regex vs LLM判定',
+    'coding-standards': 'コーディング規約',
+    // verification
+    'verification-loop': '検証ループ',
+    'tdd-workflow': 'TDD',
+    'e2e-testing': 'E2Eテスト',
+    'security-review': 'セキュリティレビュー',
+    'security-scan': 'Claude設定監査',
+    'security-bounty-hunter': 'バグ報奨金ハント',
+    'plankton-code-quality': '書込時コード品質',
+    // compliance
+    'hipaa-compliance': 'HIPAA準拠',
+    'healthcare-phi-compliance': '医療PHI準拠',
+    'defi-amm-security': 'DeFi AMM監査',
+    'llm-trading-agent-security': '自律取引セキュリティ',
+    'evm-token-decimals': 'EVM小数対応',
+    'nodejs-keccak256': 'Node Keccak256',
+    // frontend / mobile
+    'liquid-glass-design': 'iOS26 Liquid Glass',
+    'foundation-models-on-device': 'Apple端末LLM',
+    'compose-multiplatform-patterns': 'Compose MP',
+    'android-clean-architecture': 'Androidクリーンアーキ',
+    // Platforms
+    'google-workspace-ops': 'Google Workspace',
+    'trello-microsoft': 'Trello×MS連携',
+    'jira-integration': 'Jira連携',
+    'github-ops': 'GitHub操作',
+    'x-api': 'X/Twitter API',
+    'nutrient-document-processing': 'OCR・書類変換',
+    // lang patterns
+    'python-patterns': 'Python設計',
+    'python-testing': 'Pythonテスト',
+    'typescript-patterns': 'TS設計',
+    'golang-patterns': 'Go設計',
+    'golang-testing': 'Goテスト',
+    'rust-patterns': 'Rust設計',
+    'rust-testing': 'Rustテスト',
+    'kotlin-patterns': 'Kotlin設計',
+    'kotlin-testing': 'Kotlinテスト',
+    'kotlin-coroutines-flows': 'Kotlin Coroutine',
+    'kotlin-ktor-patterns': 'Ktor Server',
+    'kotlin-exposed-patterns': 'Exposed ORM',
+    'swift-concurrency-6-2': 'Swift並行処理',
+    'swift-actor-persistence': 'Swift actor永続化',
+    'swift-protocol-di-testing': 'Swift Protocol DI',
+    'swiftui-patterns': 'SwiftUI設計',
+    'dart-flutter-patterns': 'Flutter設計',
+    'java-coding-standards': 'Java規約',
+    'cpp-coding-standards': 'C++規約',
+    'cpp-testing': 'C++テスト',
+    'csharp-testing': 'C#テスト',
+    'dotnet-patterns': '.NETパターン',
+    'perl-patterns': 'Perl設計',
+    'perl-security': 'Perlセキュリティ',
+    'perl-testing': 'Perlテスト',
+    // frameworks
+    'django-patterns': 'Django設計',
+    'django-security': 'Djangoセキュリティ',
+    'django-tdd': 'Django TDD',
+    'django-verification': 'Django検証',
+    'laravel-patterns': 'Laravel設計',
+    'laravel-plugin-discovery': 'Laravel拡張',
+    'laravel-security': 'Laravelセキュリティ',
+    'laravel-tdd': 'Laravel TDD',
+    'laravel-verification': 'Laravel検証',
+    'springboot-patterns': 'Spring Boot設計',
+    'springboot-security': 'Spring Security',
+    'springboot-tdd': 'Spring Boot TDD',
+    'springboot-verification': 'Spring Boot検証',
+    'jpa-patterns': 'JPA設計',
+    'nestjs-patterns': 'NestJS設計',
+    'backend-patterns': 'バックエンド設計',
+    'frontend-patterns': 'フロントエンド設計',
+    // infra
+    'database-migrations': 'DBマイグレーション',
+    'postgres-patterns': 'PostgreSQL設計',
+    'clickhouse-io': 'ClickHouse運用',
+    'docker-patterns': 'Docker設計',
+    'deployment-patterns': 'デプロイパターン',
+  };
+  function subtitleFor(name, desc) {
+    const t = JA_ONELINE[name];
+    if (t) return t;
+    if (!desc) return '';
+    // Fallback: use first sentence / first 26 chars of the raw description
+    const s = desc.split(/[.。\n]/)[0].trim();
+    return s.length > 26 ? s.slice(0, 26) + '…' : s;
+  }
+
   function iconFor(name) {
     const p = pinnedByName[name];
     if (p) return p.icon;
@@ -354,9 +538,19 @@
       btn.type = 'button';
       btn.className = 'skill-btn' + (meta ? ' pinned' : '');
       btn.title = `/${s.name}${s.description ? '\n' + s.description : ''}`;
-      const label = meta ? meta.ja : s.name;
-      const labelCls = meta ? 'sb-name ja' : 'sb-name';
-      btn.innerHTML = `<span class="sb-icon">${iconFor(s.name)}</span><span class="${labelCls}">${esc(label)}</span>`;
+      if (meta) {
+        // Pinned: single line Japanese verb label
+        btn.innerHTML = `<span class="sb-icon">${iconFor(s.name)}</span><span class="sb-name ja">${esc(meta.ja)}</span>`;
+      } else {
+        // Non-pinned: Japanese one-liner (what it does) + small slug underneath
+        const ja = subtitleFor(s.name, s.description);
+        const hasJa = !!JA_ONELINE[s.name];
+        btn.innerHTML = `
+          <span class="sb-icon">${iconFor(s.name)}</span>
+          <span class="sb-name ${hasJa ? 'ja' : ''}">${esc(ja || s.name)}</span>
+          ${hasJa ? `<span class="sb-sub">${esc(s.name)}</span>` : ''}
+        `;
+      }
       btn.addEventListener('click', () => {
         const cur = promptEl.value;
         const needsSpace = cur && !cur.endsWith(' ');
