@@ -33,9 +33,14 @@ SESSIONS_FILE = BASE_DIR / "sessions.json"
 HOME = Path.home()
 ROJI = HOME / "OneDrive - 株式会社pragmateches" / "ロジ"
 
+# Prefer the native claude.exe over claude.cmd: batch-script wrappers mangle
+# non-ASCII argv (Japanese / emoji) on Windows because Python passes argv as
+# UTF-16 through CreateProcessW but cmd.exe re-encodes via the ANSI code page.
+_CLAUDE_EXE = HOME / "AppData" / "Roaming" / "npm" / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe"
+_CLAUDE_CMD_FALLBACK = HOME / "AppData" / "Roaming" / "npm" / "claude.cmd"
 CLAUDE_CMD = os.environ.get(
     "REMOTE_COMMANDER_CLAUDE",
-    str(HOME / "AppData" / "Roaming" / "npm" / "claude.cmd"),
+    str(_CLAUDE_EXE if _CLAUDE_EXE.exists() else _CLAUDE_CMD_FALLBACK),
 )
 
 # Workspace presets shown in the directory picker.
@@ -167,15 +172,20 @@ async def run_job(job: Job, prompt: str, model: str | None, resume: bool) -> Non
     async def pump_stdout() -> None:
         """Parse stream-JSON that may contain embedded \\n inside text fields.
         We read into a buffer and use json.JSONDecoder.raw_decode to find each
-        complete JSON object regardless of its line layout."""
+        complete JSON object regardless of its line layout. An incremental
+        UTF-8 decoder ensures multi-byte characters split across read chunks
+        don't corrupt the JSON (critical for Japanese / emoji output)."""
+        import codecs
+        utf8 = codecs.getincrementaldecoder("utf-8")(errors="replace")
         decoder = json.JSONDecoder()
         buf = ""
         assert proc.stdout is not None
         while True:
             chunk = await proc.stdout.read(8192)
             if not chunk:
+                buf += utf8.decode(b"", final=True)
                 break
-            buf += chunk.decode("utf-8", errors="replace")
+            buf += utf8.decode(chunk)
             while True:
                 stripped = buf.lstrip()
                 if not stripped:
