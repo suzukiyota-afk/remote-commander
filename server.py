@@ -164,31 +164,51 @@ async def run_job(job: Job, prompt: str, model: str | None, resume: bool) -> Non
 
     job.proc = proc
 
-    async def pump_stream(stream: asyncio.StreamReader, source: str) -> None:
-        async for raw in stream:
-            text = raw.decode("utf-8", errors="replace").rstrip()
-            if not text:
-                continue
-            if source == "stdout":
+    async def pump_stdout() -> None:
+        """Parse stream-JSON that may contain embedded \\n inside text fields.
+        We read into a buffer and use json.JSONDecoder.raw_decode to find each
+        complete JSON object regardless of its line layout."""
+        decoder = json.JSONDecoder()
+        buf = ""
+        assert proc.stdout is not None
+        while True:
+            chunk = await proc.stdout.read(8192)
+            if not chunk:
+                break
+            buf += chunk.decode("utf-8", errors="replace")
+            while True:
+                stripped = buf.lstrip()
+                if not stripped:
+                    buf = ""
+                    break
                 try:
-                    payload = json.loads(text)
+                    obj, idx = decoder.raw_decode(stripped)
                 except json.JSONDecodeError:
-                    payload = {"type": "raw", "text": text}
-                # Opportunistically keep a text preview for the job list
-                if payload.get("type") == "stream_event":
-                    d = payload.get("event", {}).get("delta", {})
+                    # Need more data
+                    break
+                lead = len(buf) - len(stripped)
+                buf = buf[lead + idx:]
+                # Update preview
+                t = obj.get("type")
+                if t == "stream_event":
+                    d = obj.get("event", {}).get("delta", {})
                     if d.get("type") == "text_delta":
                         job.preview = (job.preview + d.get("text", ""))[-200:]
-                elif payload.get("type") == "result":
-                    job.preview = (payload.get("result") or job.preview)[:200]
-                job.publish(payload)
-            else:
+                elif t == "result":
+                    job.preview = (obj.get("result") or job.preview)[:200]
+                job.publish(obj)
+        # Flush any trailing non-JSON garbage as a single raw payload
+        if buf.strip():
+            job.publish({"type": "raw", "text": buf.strip()[:4000]})
+
+    async def pump_stderr() -> None:
+        assert proc.stderr is not None
+        async for raw in proc.stderr:
+            text = raw.decode("utf-8", errors="replace").rstrip()
+            if text:
                 job.publish({"type": "stderr", "text": text})
 
-    await asyncio.gather(
-        pump_stream(proc.stdout, "stdout"),
-        pump_stream(proc.stderr, "stderr"),
-    )
+    await asyncio.gather(pump_stdout(), pump_stderr())
     rc = await proc.wait()
     if job.status == "running":
         job.status = "canceled" if rc != 0 and job._cancel_flag else ("done" if rc == 0 else "error")

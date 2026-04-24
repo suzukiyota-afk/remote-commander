@@ -725,6 +725,15 @@
     }
     if (ev.type === 'stderr') return; // hide from UI
     if (ev.type === 'error') { addTurn('system', 'error: ' + ev.error); return; }
+    if (ev.type === 'raw') {
+      // Last-resort: CLI produced non-JSON output (should not happen now but keep the user informed)
+      if (!state.assistantEl) state.assistantEl = addTurn('assistant', '', { noCopy: true });
+      state.assistantBuf += (state.assistantBuf ? '\n' : '') + (ev.text || '');
+      state.assistantEl.querySelector('.bubble').innerHTML = md(state.assistantBuf);
+      attachCopyBtn(state.assistantEl, () => state.assistantBuf);
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
     if (ev.type === 'done') {
       jobChip.textContent = 'job ' + (state.activeJobId || '').slice(0, 6) + ' · ' + (ev.status || 'done');
       jobChip.className = 'job-chip ' + (ev.status || 'done');
