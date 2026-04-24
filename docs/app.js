@@ -81,6 +81,7 @@
     assistantEl: null,
     currentEventSource: null,
     abortReader: null,
+    queue: [],  // pending prompts when a job is still running
   };
 
   // ------- status bar -------
@@ -756,6 +757,14 @@
       state.activeJobId = null;
       persistMessages();
       refreshSessions(); refreshJobs();
+      // Fire off the next queued prompt, if any
+      if (state.queue.length > 0) {
+        const next = state.queue.shift();
+        addTurn('system', `↻ キュー送信 (残り ${state.queue.length}件)`);
+        state.uploads = next.uploads;
+        promptEl.value = next.prompt;
+        setTimeout(() => send(), 300);
+      }
       return;
     }
 
@@ -823,9 +832,18 @@
 
   // ------- send -------
   async function send() {
-    if (state.activeJobId) return;
     const prompt = promptEl.value.trim();
     if (!prompt && !state.uploads.length) return;
+
+    // If a job is running, queue this prompt instead of rejecting it.
+    if (state.activeJobId) {
+      state.queue.push({ prompt, uploads: state.uploads.slice() });
+      addTurn('user', prompt + (state.uploads.length ? `\n[${state.uploads.length}枚添付]` : ''));
+      addTurn('system', `⏳ 前の応答を待機中…完了後に自動送信します（キュー: ${state.queue.length}件）`);
+      promptEl.value = ''; autosize();
+      state.uploads = []; renderAttachments();
+      return;
+    }
 
     addTurn('user', prompt + (state.uploads.length ? `\n[${state.uploads.length}枚添付]` : ''));
     promptEl.value = ''; autosize();
