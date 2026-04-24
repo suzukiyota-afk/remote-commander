@@ -591,36 +591,72 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ===== skills ===== */
-.skill-list { list-style: none; padding: 0; margin: 8px 0 0; max-height: 320px; overflow-y: auto; }
-.skill-item {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 8px 10px;
-  margin: 2px 0;
+/* ===== skills — identical button style to WORKSPACE ===== */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+/* Reuse ws-btn look for consistency; only add small tweaks here */
+.skill-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  min-height: 54px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.02);
-  border-left: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--ui);
   cursor: pointer;
-  transition: all 120ms var(--ease-out-expo);
+  transition: all 140ms var(--ease-out-expo);
+  text-align: center;
+  overflow: hidden;
 }
-.skill-item:hover, .skill-item:active {
+.skill-btn:hover, .skill-btn:active {
   background: rgba(237,177,188,0.08);
-  border-left-color: var(--accent-2);
+  color: var(--text);
 }
-.skill-item .sk-name {
+.skill-btn.pinned {
+  background: linear-gradient(135deg, rgba(173,0,33,0.08), rgba(224,123,0,0.04));
+}
+.sb-icon { font-size: 18px; color: var(--hl); line-height: 1; }
+.skill-btn:hover .sb-icon { color: var(--accent-2); }
+.sb-name {
   font-family: var(--mono);
-  font-size: 11px;
-  color: var(--hl);
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  word-break: break-all;
 }
-.skill-item .sk-name::before { content: '/'; color: var(--accent); margin-right: 1px; }
-.skill-item .sk-desc {
+.sb-name.ja {
+  font-family: var(--ui);
+  letter-spacing: 0.02em;
   font-size: 10.5px;
-  color: var(--text-faint);
-  line-height: 1.4;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: keep-all;
 }
-.muted { color: var(--text-faint); font-weight: normal; }
+
+.skill-toggle {
+  float: right;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-faint);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.skill-toggle:hover { color: var(--hl); border-color: var(--border-strong); }
+.skill-toggle.on { color: var(--accent-2); border-color: rgba(224,123,0,0.45); }
+
+.muted { color: var(--text-faint); font-weight: normal; font-family: var(--mono); font-size: 10px; }
 
 /* ===== subbar (cwd + session + job chips) ===== */
 .subbar {

@@ -254,34 +254,106 @@
     refreshSessions();
   }
 
-  // ------- skills -------
-  const skillList = $('#skillList');
+  // ------- skills — WORKSPACE-style button grid -------
+  const skillGrid = $('#skillGrid');
   const skillSearch = $('#skillSearch');
   const skillCount = $('#skillCount');
+  const skillToggle = $('#skillToggle');
+
+  const PINNED = [
+    { name: 'ppt-auto',                  ja: 'PPT自動',      icon: '▤' },
+    { name: 'competitive-research',      ja: '競合調査',     icon: '⟡' },
+    { name: 'deep-research',             ja: '深掘り調査',   icon: '⟡' },
+    { name: 'market-research',           ja: '市場調査',     icon: '⟡' },
+    { name: 'research-ops',              ja: 'リサーチ運用', icon: '⟡' },
+    { name: 'expense-monthly',           ja: '月次経費',     icon: '¥' },
+    { name: 'kamiya-expense',            ja: 'カミヤ経費',   icon: '¥' },
+    { name: 'outlook-calendar',          ja: '予定確認',     icon: '▦' },
+    { name: 'outlook-free-time',         ja: '空き時間',     icon: '▦' },
+    { name: 'outlook-otp',               ja: '認証コード',   icon: '✉' },
+    { name: 'outlook-reschedule-notify', ja: 'リスケ通知',   icon: '✉' },
+    { name: 'outlook-attachment-store',  ja: '添付保存',     icon: '✉' },
+    { name: 'slack-notify',              ja: 'Slack送信',    icon: '◎' },
+    { name: 'smarthr-payslip',           ja: '給与明細',     icon: '⧗' },
+    { name: 'kadou-entry',               ja: '稼働入力',     icon: '⏲' },
+    { name: 'onenote-logi',              ja: 'OneNote',      icon: '▥' },
+    { name: 'tico-logi',                 ja: 'TICOロジ',     icon: '▥' },
+    { name: 'instagram-post',            ja: 'IG投稿',       icon: '⚇' },
+    { name: 'twitter-post',              ja: 'X投稿',        icon: '⚇' },
+    { name: 'frontend-design',           ja: 'フロント設計', icon: '◧' },
+    { name: 'frontend-slides',           ja: 'HTMLスライド', icon: '◧' },
+    { name: 'email-ops',                 ja: 'メール運用',   icon: '✉' },
+  ];
+  const pinnedByName = Object.fromEntries(PINNED.map((p) => [p.name, p]));
+
+  function iconFor(name) {
+    const p = pinnedByName[name];
+    if (p) return p.icon;
+    const pairs = [
+      [/ppt|slides?/i, '▤'],
+      [/outlook|email|mail/i, '✉'],
+      [/research|exa|search-first/i, '⟡'],
+      [/expense|billing|finance/i, '¥'],
+      [/smarthr|hr\b/i, '⧗'],
+      [/onenote|tico|kadou/i, '▥'],
+      [/slack|messages?-ops/i, '◎'],
+      [/instagram|twitter|x-api|social|crosspost/i, '⚇'],
+      [/form-outreach|bg-sync|scrap/i, '⇢'],
+      [/plaud|zoom|video|audio|meeting/i, '⏺'],
+      [/github|jira|trello|linear/i, '⎔'],
+      [/frontend|design|react|nextjs/i, '◧'],
+      [/backend|server|api/i, '▣'],
+      [/review|test|tdd|verify|quality|gate/i, '✓'],
+      [/security|audit|compliance|hipaa|phi/i, '⚔'],
+      [/python|typescript|golang|rust|kotlin|swift|dart|flutter|java|php|perl|csharp|cpp/i, '⌁'],
+      [/skill|configure|init|harness|agent/i, '✦'],
+      [/database|postgres|clickhouse|migration|jpa|exposed/i, '⎕'],
+      [/deploy|docker|ci-?cd/i, '▲'],
+      [/outreach|connections|investor|lead|pitch/i, '◇'],
+    ];
+    for (const [re, ic] of pairs) if (re.test(name)) return ic;
+    return '◆';
+  }
+
   state.skills = [];
+  state.showAll = false;
+
   async function loadSkills() {
     try {
       const r = await api('/api/skills');
       const j = await r.json();
       state.skills = j.skills || [];
-      skillCount.textContent = `(${j.count || state.skills.length})`;
+      skillCount.textContent = `(${state.skills.length})`;
       renderSkills(skillSearch.value);
     } catch {}
   }
+
   function renderSkills(filter) {
     const q = (filter || '').trim().toLowerCase();
-    skillList.innerHTML = '';
-    const items = q
-      ? state.skills.filter((s) =>
-          s.name.toLowerCase().includes(q) ||
-          (s.description || '').toLowerCase().includes(q))
-      : state.skills;
-    for (const s of items.slice(0, 80)) {
-      const li = document.createElement('li');
-      li.className = 'skill-item';
-      li.innerHTML = `<span class="sk-name">${esc(s.name)}</span>` +
-                     (s.description ? `<span class="sk-desc">${esc(s.description)}</span>` : '');
-      li.addEventListener('click', () => {
+    skillGrid.innerHTML = '';
+    let items;
+    if (q) {
+      items = state.skills.filter((s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q));
+    } else if (state.showAll) {
+      items = state.skills;
+    } else {
+      const names = new Set(state.skills.map((s) => s.name));
+      items = PINNED.filter((p) => names.has(p.name)).map((p) => ({
+        name: p.name, description: (state.skills.find((s) => s.name === p.name) || {}).description,
+      }));
+    }
+    for (const s of items.slice(0, 250)) {
+      const meta = pinnedByName[s.name];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'skill-btn' + (meta ? ' pinned' : '');
+      btn.title = `/${s.name}${s.description ? '\n' + s.description : ''}`;
+      const label = meta ? meta.ja : s.name;
+      const labelCls = meta ? 'sb-name ja' : 'sb-name';
+      btn.innerHTML = `<span class="sb-icon">${iconFor(s.name)}</span><span class="${labelCls}">${esc(label)}</span>`;
+      btn.addEventListener('click', () => {
         const cur = promptEl.value;
         const needsSpace = cur && !cur.endsWith(' ');
         promptEl.value = (needsSpace ? cur + ' ' : cur) + '/' + s.name + ' ';
@@ -289,10 +361,16 @@
         autosize();
         drawer.classList.remove('open');
       });
-      skillList.appendChild(li);
+      skillGrid.appendChild(btn);
     }
   }
   skillSearch.addEventListener('input', () => renderSkills(skillSearch.value));
+  skillToggle.addEventListener('click', () => {
+    state.showAll = !state.showAll;
+    skillToggle.classList.toggle('on', state.showAll);
+    skillToggle.textContent = state.showAll ? 'pinned' : 'all';
+    renderSkills(skillSearch.value);
+  });
 
   // ------- jobs list -------
   async function refreshJobs() {
